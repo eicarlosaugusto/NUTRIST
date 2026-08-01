@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>Protocolo Nutricional - Carlos Augusto</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- jsPDF Library for Generating PDF Reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            cardLight: '#334155',
+                            border: '#475569',
+                            accent: '#2dd4bf',
+                            accentHover: '#14b8a6',
+                            gold: '#fbbf24',
+                            danger: '#f43f5e',
+                            emerald: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .custom-checkbox:checked + div {
+            background-color: #2dd4bf;
+            border-color: #2dd4bf;
+        }
+        .custom-checkbox:checked + div i {
+            display: block;
+        }
+    </style>
+</head>
+<body class="pb-24 pt-2 min-h-screen bg-brand-dark text-slate-100 flex flex-col justify-between">
+
+    <!-- HEADER / APP BAR -->
+    <header class="sticky top-0 z-40 bg-brand-dark/95 backdrop-blur-md border-b border-brand-cardLight px-4 py-3">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-brand-accent/20 border border-brand-accent flex items-center justify-center text-brand-accent font-bold text-lg shadow-inner">
+                    CA
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold leading-tight text-white flex items-center gap-1.5">
+                        Carlos Augusto 
+                        <span class="text-[10px] bg-brand-accent/20 text-brand-accent px-1.5 py-0.5 rounded font-mono">1.83m</span>
+                    </h1>
+                    <p class="text-xs text-brand-accent font-medium" id="current-date-str">Carregando data...</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- NOTIFICATION TOGGLE BUTTON -->
+                <button onclick="requestNotificationPermission()" id="btn-notify" title="Ativar Lembretes" class="bg-brand-card border border-brand-cardLight text-slate-400 hover:text-brand-gold w-9 h-9 rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-bell text-xs"></i>
+                </button>
+                <div class="flex items-center gap-1.5 bg-brand-card border border-brand-cardLight px-2.5 py-1.5 rounded-full shadow-lg">
+                    <i class="fa-solid fa-fire text-brand-gold text-xs animate-pulse"></i>
+                    <span class="text-xs font-bold text-slate-200" id="streak-counter">0 Dias</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="max-w-md mx-auto px-4 py-4 w-full flex-1">
+
+        <!-- TAB 1: MEU DIA (APENAS REFEIÇÕES E TREINO/CARDIO/ÁGUA) -->
+        <section id="tab-hoje" class="tab-content space-y-4">
+            <!-- PROGRESS CARD -->
+            <div class="bg-gradient-to-br from-brand-card via-slate-900 to-slate-950 border border-brand-cardLight rounded-2xl p-4 shadow-2xl">
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Metas Nutricionais de Hoje</span>
+                        <span class="text-[11px] text-slate-400" id="completed-count">0 de 16 concluídas</span>
+                    </div>
+                    <span class="text-2xl font-black text-brand-accent" id="progress-percent">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700/80">
+                    <div id="progress-bar" class="bg-gradient-to-r from-brand-accent to-emerald-400 h-full w-0 transition-all duration-500 rounded-full"></div>
+                </div>
+                <div class="mt-2.5 flex justify-between items-center text-xs">
+                    <span class="text-brand-gold font-semibold flex items-center gap-1" id="status-message">
+                        <i class="fa-solid fa-bolt"></i> Foco na recomposição corporal!
+                    </span>
+                    <button onclick="resetTodayData()" class="text-[11px] text-slate-400 hover:text-brand-danger transition">
+                        <i class="fa-solid fa-rotate-right mr-1"></i>Resetar
+                    </button>
+                </div>
+            </div>
+
+            <!-- UNIFIED MEALS WITH CHECKBOXES -->
+            <div id="unified-meals-container" class="space-y-4">
+                <!-- Dynamic meal cards -->
+            </div>
+        </section>
+
+        <!-- TAB 2: METAS & MEDIDAS (COM 2 OPÇÕES DE AVALIAÇÃO: COMPLETA OU SÓ PESO) -->
+        <section id="tab-metas" class="tab-content hidden space-y-4">
+            <!-- RECOMPOSITION INFO -->
+            <div class="bg-gradient-to-br from-brand-card to-slate-900 border border-brand-cardLight rounded-2xl p-4 space-y-2">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-bullseye text-brand-gold"></i> Recomposição Corporal
+                    </h2>
+                    <span class="bg-brand-accent/20 border border-brand-accent text-brand-accent text-[11px] font-bold px-2 py-0.5 rounded-full">1.83m | ~77,8kg</span>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Acompanhe o ganho de massa magra e a redução da pochete. Escolha se prefere registrar o <strong>Checkup Completo com Fita Métrica</strong> ou apenas o <strong>Peso Rápido</strong>.
+                </p>
+            </div>
+
+            <!-- DUAL EVALUATION CHOICE CARD -->
+            <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Avaliação Semanal</h3>
+                    <span class="text-[11px] text-slate-400" id="measurement-lock-status">Status: Verificando data...</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="startMeasurementWizard()" id="btn-start-wizard" class="bg-brand-accent text-brand-dark font-bold text-xs p-3 rounded-xl hover:bg-brand-accentHover transition flex flex-col items-center gap-1.5 text-center shadow-lg shadow-brand-accent/10">
+                        <i class="fa-solid fa-tape text-base"></i>
+                        <span>Medidas + Peso</span>
+                        <span class="text-[9px] text-slate-900 font-normal">Wizard Ilustrado (4 Etapas)</span>
+                    </button>
+
+                    <button onclick="toggleQuickWeightModal(true)" id="btn-quick-weight" class="bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs p-3 rounded-xl hover:bg-slate-700 transition flex flex-col items-center gap-1.5 text-center">
+                        <i class="fa-solid fa-weight-scale text-base text-brand-gold"></i>
+                        <span>Apenas Peso</span>
+                        <span class="text-[9px] text-slate-400 font-normal">Rápido em Balança (10s)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- QUICK WEIGHT ONLY MODAL (HIDDEN BY DEFAULT) -->
+            <div id="quick-weight-modal" class="hidden bg-slate-900 border border-brand-gold rounded-2xl p-4 space-y-3 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-brand-gold uppercase"><i class="fa-solid fa-weight-scale mr-1"></i> Registro Rápido de Peso</span>
+                    <button onclick="toggleQuickWeightModal(false)" class="text-slate-400 hover:text-brand-danger text-xs px-2 py-1">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs text-slate-300 font-bold block">Seu Peso em Jejum Hoje (kg):</label>
+                    <input type="number" step="0.1" id="quick-weight-input" placeholder="Ex: 77.5" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-brand-gold">
+                    <button onclick="saveQuickWeight()" class="w-full bg-brand-gold text-brand-dark font-bold text-xs py-2.5 rounded-xl hover:bg-yellow-400 transition">
+                        Salvar Peso Apenas
+                    </button>
+                </div>
+            </div>
+
+            <!-- MEASUREMENT STEP-BY-STEP WIZARD MODAL -->
+            <div id="wizard-modal" class="hidden bg-slate-900 border border-brand-accent rounded-2xl p-4 space-y-4 shadow-2xl relative">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-brand-accent uppercase" id="wizard-step-title">Etapa 1 de 4: Cintura/Umbigo</span>
+                    <button onclick="closeWizard()" class="text-slate-400 hover:text-brand-danger text-xs px-2 py-1">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <div id="wizard-step-content" class="space-y-3">
+                    <!-- Wizard Step Render -->
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                    <button onclick="prevWizardStep()" id="wizard-btn-prev" class="bg-slate-800 text-slate-300 font-bold text-xs px-3 py-2 rounded-xl disabled:opacity-30">
+                        <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+                    </button>
+                    <button onclick="nextWizardStep()" id="wizard-btn-next" class="bg-brand-accent text-brand-dark font-bold text-xs px-4 py-2 rounded-xl">
+                        Próximo <i class="fa-solid fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- MEASUREMENTS HISTORY -->
+            <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-3">
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-brand-accent"></i> Histórico de Evolução
+                </h3>
+                <div id="measurements-history-container" class="space-y-2">
+                    <!-- Dynamic history table -->
+                </div>
+            </div>
+
+            <!-- REPORT GENERATION & DATA EXPORT PANEL -->
+            <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-3">
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf text-brand-gold"></i> Relatório PDF & Exportação de Dados
+                </h3>
+                <p class="text-[11px] text-slate-400">Gere um documento profissional em PDF com a análise da sua evolução e taxas de aderência para salvar no celular, ou exporte seu backup em formato estruturado.</p>
+                
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button onclick="generatePDFReport()" class="bg-slate-900 border border-brand-gold text-brand-gold font-bold text-xs py-2.5 px-3 rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-file-arrow-down"></i> Baixar PDF
+                    </button>
+                    <button onclick="exportJSONBackup()" class="bg-slate-900 border border-brand-cardLight text-slate-300 font-bold text-xs py-2.5 px-3 rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> Exportar Dados
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: BATCH COOKING & RECEITAS -->
+        <section id="tab-batch" class="tab-content hidden space-y-4">
+            <!-- SCALE CALCULATOR HEADER -->
+            <div class="bg-gradient-to-br from-slate-800 to-brand-card border border-brand-cardLight rounded-2xl p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-scale-balanced text-brand-accent"></i> Calculadora da Balança de Cozinha
+                    </h2>
+                    <span class="text-xs text-brand-gold font-semibold">Peso Cru vs Cozido</span>
+                </div>
+                <p class="text-xs text-slate-300 mb-3">Valores exatos em gramas e litros calculados para sua rotina:</p>
+
+                <div class="grid grid-cols-3 gap-2 mb-4" id="days-selector">
+                    <button onclick="setBatchDays(7)" class="day-btn bg-slate-700 border border-slate-600 text-xs py-2 rounded-xl font-bold text-slate-300 hover:border-brand-accent transition" data-days="7">7 Dias</button>
+                    <button onclick="setBatchDays(15)" class="day-btn bg-brand-accent text-brand-dark border border-brand-accent text-xs py-2 rounded-xl font-bold transition shadow-lg shadow-brand-accent/20" data-days="15">15 Dias</button>
+                    <button onclick="setBatchDays(30)" class="day-btn bg-slate-700 border border-slate-600 text-xs py-2 rounded-xl font-bold text-slate-300 hover:border-brand-accent transition" data-days="30">30 Dias</button>
+                </div>
+
+                <div id="scale-results" class="space-y-2 text-xs">
+                    <!-- Dynamic scale calculations -->
+                </div>
+            </div>
+
+            <!-- COOKING MODES TOGGLE -->
+            <div class="bg-slate-900 border border-brand-cardLight rounded-xl p-1 flex">
+                <button onclick="switchCookingMode('modoA')" id="btn-modoA" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-brand-accent text-brand-dark shadow">
+                    <i class="fa-solid fa-fire-burner mr-1"></i> Modo A: Fogão + Mixer
+                </button>
+                <button onclick="switchCookingMode('modoB')" id="btn-modoB" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-plug text-brand-gold mr-1"></i> Modo B: Panela PCC20
+                </button>
+            </div>
+
+            <!-- RECIPES DETAIL CONTENT -->
+            <div id="cooking-guide-content" class="space-y-4">
+                <!-- Dynamic cooking steps -->
+            </div>
+        </section>
+
+        <!-- TAB 4: COMPRAS CHECKABLE & ANÁLISE NUTRICIONAL -->
+        <section id="tab-compras" class="tab-content hidden space-y-4">
+            <div class="flex border-b border-brand-cardLight">
+                <button onclick="switchShoppingTab('mensal')" id="shop-tab-mensal" class="flex-1 py-2 text-xs font-bold border-b-2 border-brand-accent text-brand-accent text-center">
+                    Estoque Mensal
+                </button>
+                <button onclick="switchShoppingTab('quinzenal')" id="shop-tab-quinzenal" class="flex-1 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 text-center">
+                    Reposição Quinzenal
+                </button>
+                <button onclick="switchShoppingTab('analise')" id="shop-tab-analise" class="flex-1 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 text-center">
+                    Análise Científica
+                </button>
+            </div>
+
+            <div id="shopping-list-container" class="space-y-3">
+                <!-- Dynamic Content -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-brand-dark/95 backdrop-blur-lg border-t border-brand-cardLight z-50 px-2 py-2">
+        <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
+            <button onclick="switchTab('hoje')" id="nav-hoje" class="nav-btn flex flex-col items-center py-1.5 px-2 rounded-xl text-brand-accent font-bold transition">
+                <i class="fa-solid fa-calendar-check text-base mb-1"></i>
+                <span class="text-[10px]">Meu Dia</span>
+            </button>
+            <button onclick="switchTab('metas')" id="nav-metas" class="nav-btn flex flex-col items-center py-1.5 px-2 rounded-xl text-slate-400 transition hover:text-slate-200">
+                <i class="fa-solid fa-tape text-base mb-1"></i>
+                <span class="text-[10px]">Metas & Medidas</span>
+            </button>
+            <button onclick="switchTab('batch')" id="nav-batch" class="nav-btn flex flex-col items-center py-1.5 px-2 rounded-xl text-slate-400 transition hover:text-slate-200">
+                <i class="fa-solid fa-box-archive text-base mb-1"></i>
+                <span class="text-[10px]">Preparo</span>
+            </button>
+            <button onclick="switchTab('compras')" id="nav-compras" class="nav-btn flex flex-col items-center py-1.5 px-2 rounded-xl text-slate-400 transition hover:text-slate-200">
+                <i class="fa-solid fa-flask text-base mb-1"></i>
+                <span class="text-[10px]">Compras & Análise</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-brand-accent text-brand-dark px-4 py-2 rounded-full text-xs font-bold shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-msg">Salvo com sucesso!</span>
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        const unifiedMealsData = [
+            {
+                id: 'cafedamanha',
+                title: 'Café da Manhã',
+                time: '07:00',
+                tip: 'Pão 40% Integral Mitigado: A gordura do requeijão + proteína dos ovos + pectina da maçã + canela desaceleram a digestão e impedem que a farinha refinada gere pico de insulina.',
+                items: [
+                    { id: 'c1', label: 'Pão Formato Integral (40%)', detail: '2 fatias (60g) tostadas com Requeijão Light (40g)' },
+                    { id: 'c2', label: 'Ovos de Galinha', detail: '2 unidades (100g) mexidos ou cozidos rápidos' },
+                    { id: 'c3', label: 'Maçã Média com Casca', detail: '1 unidade (130g) polvilhada com canela em pó' },
+                    { id: 'c4', label: 'Creatina Monohidratada', detail: '1 colher de chá (5g) tomada com 300ml de água' }
+                ]
+            },
+            {
+                id: 'lanchedamanha',
+                title: 'Lanche da Manhã',
+                time: '10:00',
+                tip: 'A aveia em flocos fornece beta-glucanas que formam um gel no estômago, garantindo liberação lenta de glicose até o almoço.',
+                items: [
+                    { id: 'm1', label: 'Iogurte Natural Desnatado', detail: '1 copo (200g) misturado com Aveia em Flocos (30g)' },
+                    { id: 'm2', label: 'Melão Fresco ou Mamão', detail: '1 fatia média (100g). O melão dura até 2 semanas intacto.' }
+                ]
+            },
+            {
+                id: 'almoco',
+                title: 'Almoço (Marmita Balança)',
+                time: '14:00',
+                tip: 'Ordem das Garfadas: Salada e Carne primeiro, Arroz e Purê por último. Reduz o pico de insulina pós-prandial em até 40%.',
+                items: [
+                    { id: 'a1', label: 'Arroz Integral Cozido', detail: '100g pesados na balança de cozinha' },
+                    { id: 'a2', label: 'Purê de Batata-Doce / Abóbora', detail: '100g pesados na balança (baixo/médio índice glicêmico)' },
+                    { id: 'a3', label: 'Carne Bovina Magra em Tiras', detail: '100g de Patinho/Acém selados em frigideira bem quente' },
+                    { id: 'a4', label: 'Peito de Frango Grelhado/Desfiado', detail: '150g pesados na balança para aporte proteico pesado' },
+                    { id: 'a5', label: 'Legumes no Vapor (Al dente)', detail: '100g de Cenoura, Chuchu, Abobrinha ou Brócolis' },
+                    { id: 'a6', label: 'Salada Verde + Azeite', detail: '1 prato (50g) de Alface/Couve + 1 col. sopa Azeite Extra Virgem' }
+                ]
+            },
+            {
+                id: 'lanchedatarde',
+                title: 'Lanche da Tarde (Trabalho)',
+                time: '17:00',
+                tip: 'Misturar os 2 scoops de Egg/Whey Protein diretamente no copo de iogurte natural anula o gosto forte de ovo e dispensa garrafas com água.',
+                items: [
+                    { id: 't1', label: 'Mousse Proteico de Iogurte', detail: '1 copo de Iogurte Desnatado (200g) + 2 scoops Egg/Whey Growth (30g)' },
+                    { id: 't2', label: 'Maçã Média', detail: '1 unidade (130g) fácil de carregar na lancheira' }
+                ]
+            },
+            {
+                id: 'jantar',
+                title: 'Jantar (Marmita Balança)',
+                time: '20:00',
+                tip: 'O arroz integral e legumes liberam glicose gradual para síntese de glicogênio sem estocar gordura durante a noite.',
+                items: [
+                    { id: 'j1', label: 'Arroz Integral Cozido', detail: '100g pesados na balança de cozinha' },
+                    { id: 'j2', label: 'Peito de Frango ou Carne Magra', detail: '150g pesados na balança de cozinha' },
+                    { id: 'j3', label: 'Legumes no Vapor (Al dente)', detail: '100g de Abobrinha, Chuchu, Cenoura ou Brócolis' },
+                    { id: 'j4', label: 'Salada Verde + Azeite', detail: '1 prato (50g) + 1 colher de sopa de Azeite Extra Virgem' }
+                ]
+            },
+            {
+                id: 'ceia',
+                title: 'Ceia',
+                time: '21:30',
+                tip: 'A caseína natural do iogurte fornece aminoácidos continuados durante o sono para recuperação muscular.',
+                items: [
+                    { id: 'n1', label: 'Iogurte Natural Desnatado', detail: '1 copo (200g) com 1 banana pequena em rodelas congeladas (80g)' },
+                    { id: 'n2', label: 'Canela em Pó', detail: 'Polvilhar 1 pitada por cima para controle glicêmico' }
+                ]
+            },
+            {
+                id: 'habitos',
+                title: 'Pilares Diários',
+                time: 'Todo Dia',
+                tip: 'A musculação sintoniza a síntese proteica; o cardio pós-treino consome a gordura estocada na pochete.',
+                items: [
+                    { id: 'h1', label: 'Água (Mínimo 3 Litros)', detail: 'Garrafa de 1L por perto no trabalho para reabastecer 3x' },
+                    { id: 'h2', label: 'Treino de Musculação (3x a 5x/sem)', detail: 'Progressão de carga sem esgotar a energia no cardio pré' },
+                    { id: 'h3', label: 'Cardio Pós-Treino (30 minutos)', detail: 'Caminhada ou corrida moderada (~100kcal a cada 10 min)' }
+                ]
+            }
+        ];
+
+        let batchDays = 15;
+        let cookingMode = 'modoA';
+        let currentWizardStep = 1;
+        let wizardData = { cintura: '', braco: '', torax: '', peso: '' };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDateDisplay();
+            renderUnifiedMeals();
+            renderScaleResults();
+            renderCookingGuide();
+            renderShoppingList('mensal');
+            renderMeasurementsHistory();
+            checkMeasurementLockStatus();
+            loadStreak();
+            setupMealReminders();
+        });
+
+        function updateDateDisplay() {
+            const options = { weekday: 'long', day: '2-digit', month: 'long' };
+            const todayStr = new Date().toLocaleDateString('pt-BR', options);
+            document.getElementById('current-date-str').textContent = todayStr.charAt(0).toUpperCase() + todayStr.slice(1);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-brand-accent');
+                btn.classList.add('text-slate-400');
+            });
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.remove('text-slate-400');
+            activeBtn.classList.add('text-brand-accent');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function getTodayKey() {
+            const today = new Date();
+            return `carlos_diet_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+        }
+
+        function renderUnifiedMeals() {
+            const container = document.getElementById('unified-meals-container');
+            const savedState = JSON.parse(localStorage.getItem(getTodayKey()) || '{}');
+
+            let html = '';
+            unifiedMealsData.forEach(meal => {
+                html += `
+                    <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-3 shadow-md">
+                        <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-regular fa-clock text-brand-gold"></i> ${meal.title}
+                            </h3>
+                            <span class="bg-slate-900 border border-slate-700 text-brand-accent text-xs font-bold px-2.5 py-0.5 rounded-full">${meal.time}</span>
+                        </div>
+
+                        <div class="space-y-2">
+                `;
+
+                meal.items.forEach(item => {
+                    const isChecked = savedState[item.id] ? 'checked' : '';
+                    html += `
+                        <label class="flex items-start gap-3 p-2 rounded-xl hover:bg-slate-800/50 transition cursor-pointer">
+                            <div class="relative mt-0.5">
+                                <input type="checkbox" id="${item.id}" onchange="toggleItem('${item.id}')" ${isChecked} class="custom-checkbox sr-only">
+                                <div class="w-5 h-5 border-2 border-slate-600 rounded-md flex items-center justify-center transition bg-slate-900">
+                                    <i class="fa-solid fa-check text-brand-dark text-xs hidden"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <span class="text-xs font-bold text-slate-100 block leading-tight ${isChecked ? 'line-through text-slate-500' : ''}">${item.label}</span>
+                                <span class="text-[11px] text-slate-400 block">${item.detail}</span>
+                            </div>
+                        </label>
+                    `;
+                });
+
+                html += `
+                        </div>
+                        <div class="bg-slate-900/80 rounded-xl p-2.5 border border-slate-800 text-[11px] text-slate-400">
+                            <span class="text-brand-gold font-bold block mb-0.5"><i class="fa-solid fa-microscope"></i> Ciência Nutricional:</span>
+                            ${meal.tip}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            updateProgress();
+        }
+
+        function toggleItem(id) {
+            const savedState = JSON.parse(localStorage.getItem(getTodayKey()) || '{}');
+            savedState[id] = !savedState[id];
+            localStorage.setItem(getTodayKey(), JSON.stringify(savedState));
+            
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                const textSpan = checkbox.closest('label').querySelector('span');
+                if (savedState[id]) {
+                    textSpan.classList.add('line-through', 'text-slate-500');
+                } else {
+                    textSpan.classList.remove('line-through', 'text-slate-500');
+                }
+            }
+
+            updateProgress();
+            showToast('Progresso atualizado!');
+        }
+
+        function updateProgress() {
+            const savedState = JSON.parse(localStorage.getItem(getTodayKey()) || '{}');
+            
+            let totalCount = 0;
+            unifiedMealsData.forEach(m => totalCount += m.items.length);
+
+            const completedCount = Object.values(savedState).filter(Boolean).length;
+            const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-percent').textContent = `${percent}%`;
+            document.getElementById('completed-count').textContent = `${completedCount} de ${totalCount} concluídas`;
+
+            const msgEl = document.getElementById('status-message');
+            if (percent === 100) {
+                msgEl.innerHTML = '<i class="fa-solid fa-crown text-brand-gold"></i> Dia Perfeito! Recomposição em Ação!';
+                msgEl.className = 'text-emerald-400 font-bold flex items-center gap-1';
+                updateStreak();
+            } else if (percent >= 70) {
+                msgEl.innerHTML = '<i class="fa-solid fa-bolt text-brand-gold"></i> Quase lá, mantém a disciplina!';
+                msgEl.className = 'text-brand-accent font-medium flex items-center gap-1';
+            } else {
+                msgEl.innerHTML = '<i class="fa-solid fa-fire text-brand-gold"></i> Bora pra cima das refeições!';
+                msgEl.className = 'text-brand-gold font-medium flex items-center gap-1';
+            }
+        }
+
+        function updateStreak() {
+            let streak = parseInt(localStorage.getItem('carlos_streak') || '0');
+            const lastCompletedDate = localStorage.getItem('carlos_last_completed');
+            const today = new Date().toDateString();
+
+            if (lastCompletedDate !== today) {
+                streak += 1;
+                localStorage.setItem('carlos_streak', streak.toString());
+                localStorage.setItem('carlos_last_completed', today);
+                loadStreak();
+            }
+        }
+
+        function loadStreak() {
+            const streak = localStorage.getItem('carlos_streak') || '1';
+            document.getElementById('streak-counter').textContent = `${streak} Dias`;
+        }
+
+        function resetTodayData() {
+            localStorage.removeItem(getTodayKey());
+            renderUnifiedMeals();
+            showToast('Metas de hoje reiniciadas!');
+        }
+
+        // NOTIFICATIONS SYSTEM
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                showToast("Navegador sem suporte a Notificações");
+                return;
+            }
+
+            if (Notification.permission === "granted") {
+                showToast("Lembretes já estão ativados! 🔥");
+                new Notification("Protocolo Carlos Augusto", {
+                    body: "Notificações ativas! Você receberá alertas nos horários das refeições.",
+                    icon: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png"
+                });
+            } else {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        showToast("Lembretes ativados com sucesso!");
+                        document.getElementById('btn-notify').classList.add('text-brand-gold');
+                    } else {
+                        showToast("Permissão de notificação negada.");
+                    }
+                });
+            }
+        }
+
+        function setupMealReminders() {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            
+            // Check current time every 60 seconds
+            setInterval(() => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                
+                unifiedMealsData.forEach(meal => {
+                    if (meal.time === timeStr) {
+                        new Notification(`Hora do ${meal.title} (${meal.time})`, {
+                            body: `Horário de manter a disciplina! Acesse seu protocolo no celular.`,
+                            icon: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png"
+                        });
+                    }
+                });
+            }, 60000);
+        }
+
+        // WEEKLY WIZARD & DUAL EVALUATION
+        function checkMeasurementLockStatus() {
+            const history = JSON.parse(localStorage.getItem('carlos_measurements') || '[]');
+            const statusEl = document.getElementById('measurement-lock-status');
+            const btnEl = document.getElementById('btn-start-wizard');
+
+            if (history.length === 0) {
+                statusEl.textContent = 'Status: Nenhuma medição realizada ainda.';
+                statusEl.className = 'text-[11px] text-brand-accent font-bold block';
+                btnEl.classList.remove('opacity-50');
+                return;
+            }
+
+            const lastDate = new Date(history[0].timestamp);
+            const now = new Date();
+            const diffDays = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 7) {
+                statusEl.textContent = `Status: Próxima medição em ${7 - diffDays} dia(s).`;
+                statusEl.className = 'text-[11px] text-brand-gold font-semibold block';
+            } else {
+                statusEl.textContent = 'Status: Medição Semanal Liberada! 🔥';
+                statusEl.className = 'text-[11px] text-emerald-400 font-bold block animate-pulse';
+            }
+        }
+
+        function toggleQuickWeightModal(show) {
+            const modal = document.getElementById('quick-weight-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+                document.getElementById('quick-weight-input').focus();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function saveQuickWeight() {
+            const val = parseFloat(document.getElementById('quick-weight-input').value);
+            if (isNaN(val) || val <= 0) {
+                showToast('Digite um peso válido!');
+                return;
+            }
+
+            const history = JSON.parse(localStorage.getItem('carlos_measurements') || '[]');
+            const lastEntry = history[0] || {};
+
+            const newEntry = {
+                timestamp: Date.now(),
+                date: new Date().toLocaleDateString('pt-BR'),
+                cintura: lastEntry.cintura || 0,
+                braco: lastEntry.braco || 0,
+                torax: lastEntry.torax || 0,
+                peso: val
+            };
+
+            history.unshift(newEntry);
+            localStorage.setItem('carlos_measurements', JSON.stringify(history));
+
+            document.getElementById('quick-weight-input').value = '';
+            toggleQuickWeightModal(false);
+            renderMeasurementsHistory();
+            checkMeasurementLockStatus();
+            showToast('Peso registrado com sucesso!');
+        }
+
+        function startMeasurementWizard() {
+            currentWizardStep = 1;
+            wizardData = { cintura: '', braco: '', torax: '', peso: '' };
+            document.getElementById('wizard-modal').classList.remove('hidden');
+            renderWizardStep();
+        }
+
+        function closeWizard() {
+            document.getElementById('wizard-modal').classList.add('hidden');
+        }
+
+        function renderWizardStep() {
+            const titleEl = document.getElementById('wizard-step-title');
+            const contentEl = document.getElementById('wizard-step-content');
+            const btnPrev = document.getElementById('wizard-btn-prev');
+            const btnNext = document.getElementById('wizard-btn-next');
+
+            btnPrev.disabled = (currentWizardStep === 1);
+
+            if (currentWizardStep === 4) {
+                btnNext.innerHTML = 'Concluir & Salvar <i class="fa-solid fa-check ml-1"></i>';
+                btnNext.className = 'bg-emerald-400 text-brand-dark font-bold text-xs px-4 py-2 rounded-xl';
+            } else {
+                btnNext.innerHTML = 'Próximo <i class="fa-solid fa-chevron-right ml-1"></i>';
+                btnNext.className = 'bg-brand-accent text-brand-dark font-bold text-xs px-4 py-2 rounded-xl';
+            }
+
+            if (currentWizardStep === 1) {
+                titleEl.textContent = 'Etapa 1 de 4: Cintura / Umbigo (cm)';
+                contentEl.innerHTML = `
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center space-y-2">
+                        <svg class="w-28 h-28 mx-auto" viewBox="0 0 100 100" fill="none">
+                            <path d="M30 10 C35 30 25 50 28 85 L72 85 C75 50 65 30 70 10 Z" stroke="#475569" stroke-width="3" fill="#1e293b"/>
+                            <circle cx="50" cy="48" r="3" fill="#fbbf24"/>
+                            <path d="M 23 48 C 35 53 65 53 77 48" stroke="#2dd4bf" stroke-width="4" stroke-dasharray="3 2"/>
+                            <text x="50" y="68" text-anchor="middle" fill="#2dd4bf" font-size="7" font-weight="bold">Linha do Umbigo</text>
+                        </svg>
+                        <div class="text-left text-xs text-slate-300 space-y-1">
+                            <strong class="text-white block">Como se medir sozinho:</strong>
+                            <p>1. Fique de pé e relaxe o abdômen (não encolha a barriga!).</p>
+                            <p>2. Passe a fita métrica exatamente em cima do umbigo sem apertar.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-300 font-bold block mb-1">Medida da Cintura (cm):</label>
+                        <input type="number" step="0.5" id="wiz-val" value="${wizardData.cintura}" placeholder="Ex: 84.5" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-brand-accent">
+                    </div>
+                `;
+            } else if (currentWizardStep === 2) {
+                titleEl.textContent = 'Etapa 2 de 4: Braço Contraído (cm)';
+                contentEl.innerHTML = `
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center space-y-2">
+                        <svg class="w-28 h-28 mx-auto" viewBox="0 0 100 100" fill="none">
+                            <path d="M20 70 L40 70 C55 50 45 30 35 30 C25 30 20 50 20 70 Z" stroke="#475569" stroke-width="3" fill="#1e293b"/>
+                            <path d="M40 70 L75 80 L80 65 L45 55 Z" stroke="#475569" stroke-width="3" fill="#1e293b"/>
+                            <path d="M 25 45 C 35 48 45 45 35 40" stroke="#2dd4bf" stroke-width="4" stroke-dasharray="3 2"/>
+                            <text x="35" y="22" text-anchor="middle" fill="#2dd4bf" font-size="7" font-weight="bold">Pico do Biceps</text>
+                        </svg>
+                        <div class="text-left text-xs text-slate-300 space-y-1">
+                            <strong class="text-white block">Como se medir sozinho:</strong>
+                            <p>1. Dobre o cotovelo e faça força (contraia o bíceps no máximo).</p>
+                            <p>2. Passe a fita na parte mais alta e volumosa do braço.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-300 font-bold block mb-1">Medida do Braço (cm):</label>
+                        <input type="number" step="0.5" id="wiz-val" value="${wizardData.braco}" placeholder="Ex: 34.0" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-brand-accent">
+                    </div>
+                `;
+            } else if (currentWizardStep === 3) {
+                titleEl.textContent = 'Etapa 3 de 4: Tórax / Peitoral (cm)';
+                contentEl.innerHTML = `
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center space-y-2">
+                        <svg class="w-28 h-28 mx-auto" viewBox="0 0 100 100" fill="none">
+                            <path d="M20 20 L80 20 L75 70 L25 70 Z" stroke="#475569" stroke-width="3" fill="#1e293b"/>
+                            <circle cx="35" cy="40" r="2" fill="#fbbf24"/>
+                            <circle cx="65" cy="40" r="2" fill="#fbbf24"/>
+                            <path d="M 18 40 C 35 44 65 44 82 40" stroke="#2dd4bf" stroke-width="4" stroke-dasharray="3 2"/>
+                            <text x="50" y="58" text-anchor="middle" fill="#2dd4bf" font-size="7" font-weight="bold">Linha dos Mamilos</text>
+                        </svg>
+                        <div class="text-left text-xs text-slate-300 space-y-1">
+                            <strong class="text-white block">Como se medir sozinho:</strong>
+                            <p>1. Abra o tórax com postura ereta, respirando normalmente.</p>
+                            <p>2. Passe a fita por baixo das axilas na linha dos mamilos.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-300 font-bold block mb-1">Medida do Tórax (cm):</label>
+                        <input type="number" step="0.5" id="wiz-val" value="${wizardData.torax}" placeholder="Ex: 98.0" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-brand-accent">
+                    </div>
+                `;
+            } else if (currentWizardStep === 4) {
+                titleEl.textContent = 'Etapa 4 de 4: Peso Corporal (kg)';
+                contentEl.innerHTML = `
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center space-y-2">
+                        <i class="fa-solid fa-weight-scale text-4xl text-brand-gold my-2 block"></i>
+                        <div class="text-left text-xs text-slate-300 space-y-1">
+                            <strong class="text-white block">Regra da Balança Corporal:</strong>
+                            <p>Pese-se de manhã cedo em jejum, logo após ir ao banheiro e sem roupas.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-300 font-bold block mb-1">Seu Peso Corporal Hoje (kg):</label>
+                        <input type="number" step="0.1" id="wiz-val" value="${wizardData.peso}" placeholder="Ex: 77.8" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-brand-accent">
+                    </div>
+                `;
+            }
+
+            setTimeout(() => {
+                const input = document.getElementById('wiz-val');
+                if (input) input.focus();
+            }, 100);
+        }
+
+        function prevWizardStep() {
+            saveCurrentWizardVal();
+            if (currentWizardStep > 1) {
+                currentWizardStep--;
+                renderWizardStep();
+            }
+        }
+
+        function nextWizardStep() {
+            saveCurrentWizardVal();
+            if (currentWizardStep < 4) {
+                currentWizardStep++;
+                renderWizardStep();
+            } else {
+                finishWizard();
+            }
+        }
+
+        function saveCurrentWizardVal() {
+            const val = document.getElementById('wiz-val')?.value || '';
+            if (currentWizardStep === 1) wizardData.cintura = val;
+            if (currentWizardStep === 2) wizardData.braco = val;
+            if (currentWizardStep === 3) wizardData.torax = val;
+            if (currentWizardStep === 4) wizardData.peso = val;
+        }
+
+        function finishWizard() {
+            saveCurrentWizardVal();
+            
+            const history = JSON.parse(localStorage.getItem('carlos_measurements') || '[]');
+            const newEntry = {
+                timestamp: Date.now(),
+                date: new Date().toLocaleDateString('pt-BR'),
+                cintura: parseFloat(wizardData.cintura) || 0,
+                braco: parseFloat(wizardData.braco) || 0,
+                torax: parseFloat(wizardData.torax) || 0,
+                peso: parseFloat(wizardData.peso) || 0
+            };
+
+            history.unshift(newEntry);
+            localStorage.setItem('carlos_measurements', JSON.stringify(history));
+
+            closeWizard();
+            renderMeasurementsHistory();
+            checkMeasurementLockStatus();
+            showToast('Novas medidas registradas com sucesso!');
+        }
+
+        function renderMeasurementsHistory() {
+            const container = document.getElementById('measurements-history-container');
+            const history = JSON.parse(localStorage.getItem('carlos_measurements') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<span class="text-slate-500 italic text-xs block">Nenhuma medição realizada ainda.</span>';
+                return;
+            }
+
+            let html = '';
+            history.forEach((item, idx) => {
+                let diffBadge = '';
+                if (idx < history.length - 1) {
+                    const prev = history[idx + 1];
+                    if (item.cintura > 0 && prev.cintura > 0) {
+                        const diffCintura = (item.cintura - prev.cintura).toFixed(1);
+                        if (diffCintura < 0) {
+                            diffBadge = `<span class="text-emerald-400 font-bold text-[10px]">Cintura: ${diffCintura}cm 🔥</span>`;
+                        } else if (diffCintura > 0) {
+                            diffBadge = `<span class="text-brand-danger font-bold text-[10px]">Cintura: +${diffCintura}cm</span>`;
+                        }
+                    }
+                }
+
+                html += `
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs flex justify-between items-center">
+                        <div>
+                            <span class="text-brand-accent font-bold block">${item.date}</span>
+                            <span class="text-slate-400 text-[11px]">
+                                Cintura: <strong>${item.cintura || '-'}</strong> cm | Braço: <strong>${item.braco || '-'}</strong> cm | Tórax: <strong>${item.torax || '-'}</strong> cm
+                            </span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-white block">${item.peso || '-'} kg</span>
+                            ${diffBadge}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // REPORT GENERATION (PDF) & DATA EXPORT
+        function generatePDFReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const history = JSON.parse(localStorage.getItem('carlos_measurements') || '[]');
+            const streak = localStorage.getItem('carlos_streak') || '1';
+
+            // Title Header
+            doc.setFillColor(15, 23, 42); // #0f172a
+            doc.rect(0, 0, 210, 35, 'F');
+            
+            doc.setTextColor(45, 212, 191); // #2dd4bf
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.text("PROTOCOLO NUTRICIONAL - RELATÓRIO DE EVOLUÇÃO", 14, 18);
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.text("Paciente: Carlos Augusto dos Santos Filho | Estatura: 1,83m | Sibaúma - RN", 14, 27);
+
+            let y = 45;
+
+            // Summary Section
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(12);
+            doc.text("1. RESUMO DE ADERÊNCIA & META BIOLÓGICA", 14, y);
+            y += 8;
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`• Sequência de Aderência (Streak): ${streak} dias consecutivos`, 14, y); y += 6;
+            doc.text("• Estratégia Atual: Recomposição Corporal (Queima Abdominal / Ganho de Massa Magra)", 14, y); y += 6;
+            doc.text("• Perfil Nutricional: Controle de Carga Glicêmica & ~160g Proteína/Dia", 14, y); y += 12;
+
+            // Measurements History Table
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("2. HISTÓRICO DE MEDIDAS CORPORAIS & PESO", 14, y);
+            y += 8;
+
+            doc.setFillColor(30, 41, 59);
+            doc.rect(14, y, 182, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.text("Data", 18, y + 5.5);
+            doc.text("Cintura / Umbigo", 55, y + 5.5);
+            doc.text("Braço", 100, y + 5.5);
+            doc.text("Tórax", 135, y + 5.5);
+            doc.text("Peso (kg)", 165, y + 5.5);
+            y += 8;
+
+            doc.setTextColor(33, 41, 54);
+            doc.setFont("helvetica", "normal");
+
+            if (history.length === 0) {
+                doc.text("Nenhuma medição realizada até o momento.", 18, y + 6);
+                y += 10;
+            } else {
+                history.forEach((item) => {
+                    doc.text(`${item.date}`, 18, y + 5);
+                    doc.text(`${item.cintura ? item.cintura + ' cm' : '-'}`, 55, y + 5);
+                    doc.text(`${item.braco ? item.braco + ' cm' : '-'}`, 100, y + 5);
+                    doc.text(`${item.torax ? item.torax + ' cm' : '-'}`, 135, y + 5);
+                    doc.text(`${item.peso ? item.peso + ' kg' : '-'}`, 165, y + 5);
+                    doc.line(14, y + 7, 196, y + 7);
+                    y += 9;
+                });
+            }
+
+            y += 10;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.text("3. ORIENTAÇÃO TÉCNICA APLICADA", 14, y);
+            y += 7;
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text("• Para pacientes de 1,83m em recomposição, a perda de cintura com estabilidade de peso indica substituição", 14, y); y += 5;
+            doc.text("  de gordura visceral por massa magra nos braços e tórax.", 14, y); y += 10;
+
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text("Relatório gerado automaticamente pelo App Nutricional de Carlos Augusto dos Santos Filho.", 14, y);
+
+            doc.save(`Relatorio_Nutricional_Carlos_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
+            showToast("Relatório PDF baixado com sucesso!");
+        }
+
+        function exportJSONBackup() {
+            const data = {
+                measurements: JSON.parse(localStorage.getItem('carlos_measurements') || '[]'),
+                streak: localStorage.getItem('carlos_streak') || '0',
+                shoppingChecks: JSON.parse(localStorage.getItem('carlos_shopping_checks') || '{}'),
+                exportDate: new Date().toISOString()
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Backup_Nutricional_Carlos_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            showToast("Backup exportado com sucesso!");
+        }
+
+        // BATCH COOKING CALCULATOR
+        function setBatchDays(days) {
+            batchDays = days;
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                if (parseInt(btn.dataset.days) === days) {
+                    btn.className = 'day-btn bg-brand-accent text-brand-dark border border-brand-accent text-xs py-2 rounded-xl font-bold transition shadow-lg shadow-brand-accent/20';
+                } else {
+                    btn.className = 'day-btn bg-slate-700 border border-slate-600 text-xs py-2 rounded-xl font-bold text-slate-300 hover:border-brand-accent transition';
+                }
+            });
+
+            renderScaleResults();
+            renderCookingGuide();
+        }
+
+        function renderScaleResults() {
+            const container = document.getElementById('scale-results');
+            const frangoCruGrams = 400; 
+            const frangoCozidoGrams = 300;
+
+            const carneCruaGrams = 140; 
+            const carneCozidaGrams = 100;
+
+            const arrozCruGrams = 80; 
+            const arrozCozidoGrams = 200;
+            const arrozWaterMl = 240;
+
+            const batataBrutaGrams = 120;
+            const batataPureGrams = 100;
+
+            container.innerHTML = `
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-700/60 space-y-2">
+                    <div class="text-brand-accent font-bold text-xs uppercase border-b border-slate-800 pb-1">
+                        Cálculo para ${batchDays} Dias de Marmitas:
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                            <span class="text-slate-400 block">Peito de Frango Cru:</span>
+                            <span class="font-bold text-white">${(frangoCruGrams * batchDays / 1000).toFixed(1)} kg cru</span>
+                            <span class="text-slate-500 block">(${(frangoCozidoGrams * batchDays / 1000).toFixed(1)} kg desfiado)</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Carne Bovina Crua:</span>
+                            <span class="font-bold text-white">${(carneCruaGrams * batchDays / 1000).toFixed(1)} kg crua</span>
+                            <span class="text-slate-500 block">(${(carneCozidaGrams * batchDays / 1000).toFixed(1)} kg em tiras)</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Arroz Integral Cru:</span>
+                            <span class="font-bold text-white">${(arrozCruGrams * batchDays / 1000).toFixed(2)} kg (${arrozCruGrams * batchDays}g)</span>
+                            <span class="text-slate-500 block">+ ${(arrozWaterMl * batchDays / 1000).toFixed(1)} Litros de Água</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Batata-Doce Bruta:</span>
+                            <span class="font-bold text-white">${(batataBrutaGrams * batchDays / 1000).toFixed(1)} kg na feira</span>
+                            <span class="text-slate-500 block">(${(batataPureGrams * batchDays / 1000).toFixed(1)} kg purê limpo)</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchCookingMode(mode) {
+            cookingMode = mode;
+            if (mode === 'modoA') {
+                document.getElementById('btn-modoA').className = 'flex-1 py-2 text-xs font-bold rounded-lg transition bg-brand-accent text-brand-dark shadow';
+                document.getElementById('btn-modoB').className = 'flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white';
+            } else {
+                document.getElementById('btn-modoB').className = 'flex-1 py-2 text-xs font-bold rounded-lg transition bg-brand-gold text-brand-dark shadow';
+                document.getElementById('btn-modoA').className = 'flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white';
+            }
+            renderCookingGuide();
+        }
+
+        function renderCookingGuide() {
+            const container = document.getElementById('cooking-guide-content');
+            let modeHtml = '';
+
+            const waterRiceLitres = (80 * batchDays * 3 / 1000).toFixed(1);
+            const riceGrams = 80 * batchDays;
+            const rawChickenKg = (400 * batchDays / 1000).toFixed(1);
+            const chickenWaterL = (rawChickenKg * 0.6).toFixed(1);
+
+            if (cookingMode === 'modoA') {
+                modeHtml = `
+                    <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-fire-burner"></i> Modo A: Fogão + Mixer + Panelas Convencionais
+                        </h3>
+                        
+                        <div class="space-y-3 text-xs text-slate-300">
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">1. Peito de Frango Desfiado (${rawChickenKg} kg crus)</span>
+                                <p class="text-slate-400">
+                                    • Corte os ${rawChickenKg} kg de peito de frango em cubos médios.<br>
+                                    • Refogue alho, cebola e 2 colheres de sopa de páprica defumada no azeite.<br>
+                                    • Adicione <strong>${chickenWaterL} Litros de água fervente</strong>. Cozinhe por <strong>28 a 32 min</strong> com tampa.<br>
+                                    • Escorra 90% do caldo e passe o <strong>mixer por 1 minuto</strong> com o frango quente na panela. Desfia 100% sem esforço!
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">2. Purê de Batata-Doce / Abóbora (${(1.2 * batchDays / 10).toFixed(1)} kg)</span>
+                                <p class="text-slate-400">
+                                    • Cozinhe as batatas <strong>inteiras com casca</strong> em água fervente por 25 a 30 min.<br>
+                                    • A casca sairá facilmente com as mãos sob água corrente.<br>
+                                    • Volte para a panela limpa e passe o <strong>mixer por 1 minuto</strong> com 1 colher de azeite e sal.
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">3. Arroz Integral (${riceGrams}g crus na Balança)</span>
+                                <p class="text-slate-400">
+                                    • Pese <strong>${riceGrams}g de arroz integral cru</strong> na balança.<br>
+                                    • Refogue alho no azeite, junte o arroz e adicione <strong>${waterRiceLitres} Litros de água fervente</strong>.<br>
+                                    • Cozinhe em fogo baixo por <strong>32 a 35 minutos</strong> com a tampa semiaberta.
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">4. Legumes Cozidos (Cenoura, Chuchu, Abobrinha, Brócolis)</span>
+                                <p class="text-slate-400">
+                                    • Ferva 1L de água com sal e cozinhe por apenas <strong>4 a 5 minutos (Ponto Al Dente)</strong>.<br>
+                                    • Escorra e jogue água gelada por cima (choque térmico).
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">5. Higienização e Conservação da Salada (Crocante por 10 dias)</span>
+                                <p class="text-slate-400">
+                                    • Lave as folhas e seque <strong>100% com papel toalha</strong>.<br>
+                                    • Guarde em pote grande alternando camadas de papel toalha e folhas.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                modeHtml = `
+                    <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-brand-gold uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-plug"></i> Modo B: Panela de Pressão Elétrica Electrolux PCC20
+                        </h3>
+                        
+                        <div class="space-y-3 text-xs text-slate-300">
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">1. Frango Desfiado Ultrarrápido</span>
+                                <p class="text-slate-400">Frango em cubos grandes + temperos + 200ml de água. Programe a função <strong>"Frango/Carne" por 20 minutos</strong>. Retire a pressão, feche e chacoalhe por 30s.</p>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">2. Arroz Integral Automático</span>
+                                <p class="text-slate-400">Coloque ${riceGrams}g de arroz integral cru e ${(riceGrams * 2.5 / 1000).toFixed(1)} Litros de água. Selecione <strong>"Arroz Integral"</strong>.</p>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <span class="font-bold text-white block text-xs">3. Legumes no Vapor na Cestinha</span>
+                                <p class="text-slate-400">Use a cesta de vapor com 200ml de água no fundo da panela. Programe <strong>3 minutos na pressão</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const assemblyHtml = `
+                <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-3">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-packing text-brand-accent"></i> Montagem das Marmitas com Balança de Cozinha
+                    </h3>
+                    
+                    <div class="space-y-2 text-xs text-slate-300">
+                        <p>1. Ligue a balança de cozinha e coloque o pote em cima. Aperte <strong>TARA</strong> para zerar.</p>
+                        <p>2. <strong>Pote Almoço:</strong> Pese exatamente 100g de Arroz Integral + 100g de Purê + 100g de Carne em Tiras + 150g de Frango Desfiado + 100g de Legumes.</p>
+                        <p>3. <strong>Pote Jantar:</strong> Pese 100g de Arroz Integral + 150g de Frango Desfiado/Carne + 100g de Legumes.</p>
+                        <p>4. <strong>Esfriamento:</strong> Espere as marmitas esfriarem na bancada antes de congelar para não acumular água.</p>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = modeHtml + assemblyHtml;
+        }
+
+        // CHECKABLE SHOPPING LIST & SCIENTIFIC TAB
+        function switchShoppingTab(tab) {
+            document.querySelectorAll('#tab-compras button').forEach(btn => {
+                btn.className = 'flex-1 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 text-center';
+            });
+            document.getElementById(`shop-tab-${tab}`).className = 'flex-1 py-2 text-xs font-bold border-b-2 border-brand-accent text-brand-accent text-center';
+            renderShoppingList(tab);
+        }
+
+        function renderShoppingList(type) {
+            const container = document.getElementById('shopping-list-container');
+            const savedShop = JSON.parse(localStorage.getItem('carlos_shopping_checks') || '{}');
+            let html = '';
+
+            if (type === 'mensal') {
+                const items = [
+                    { id: 's_f1', name: 'Peito de Frango (Sem osso/pele)', qty: '15 kg', note: 'Açougue: 10kg em filés médios e 5kg em cubos para desfiar' },
+                    { id: 's_c1', name: 'Carne Bovina Magra (Patinho/Acém)', qty: '7,5 kg', note: 'Açougue: 4kg fatiado em tiras e 3,5kg em bifes' },
+                    { id: 's_w1', name: 'Egg / Whey Protein Growth', qty: '1 pacote (1 kg)', note: 'Estoque garantido no mês 1. Repor no mês 2.' },
+                    { id: 's_a1', name: 'Arroz Integral', qty: '3 kg', note: '3 pacotes fechados de 1 kg' },
+                    { id: 's_b1', name: 'Batata-Doce ou Abóbora Cabotiá', qty: '6 kg', note: 'Para os purês de baixo índice glicêmico' },
+                    { id: 's_av1', name: 'Aveia em Flocos', qty: '1 kg', note: 'Pacote grande de aveia em flocos' },
+                    { id: 's_p1', name: 'Pão Formato Integral (40%)', qty: '4 pacotes', note: 'Mitigado nutricionalmente. Guardar 3 pacotes no freezer' },
+                    { id: 's_rq1', name: 'Requeijão Light', qty: '4 potes (200g)', note: 'Potes fechados para geladeira' },
+                    { id: 's_az1', name: 'Azeite de Oliva Extra Virgem', qty: '1 garrafa (500ml)', note: 'Uso diário nas saladas e purê' },
+                    { id: 's_cr1', name: 'Creatina Monohidratada', qty: '1 pote (300g)', note: 'Rende até 60 dias (5g/dia)' },
+                    { id: 's_cn1', name: 'Canela em Pó', qty: '1 frasco (100g)', note: 'Para maçã, banana e iogurte' }
+                ];
+
+                items.forEach(item => {
+                    const isChecked = savedShop[item.id] ? 'checked' : '';
+                    html += `
+                        <label class="bg-brand-card border border-brand-cardLight rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-800/60 transition">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" id="${item.id}" onchange="toggleShopItem('${item.id}')" ${isChecked} class="custom-checkbox sr-only">
+                                <div class="w-5 h-5 border-2 border-slate-600 rounded flex items-center justify-center bg-slate-900">
+                                    <i class="fa-solid fa-check text-brand-dark text-xs hidden"></i>
+                                </div>
+                                <div>
+                                    <span class="font-bold text-white block ${isChecked ? 'line-through text-slate-500' : ''}">${item.name}</span>
+                                    <span class="text-slate-400 text-[11px] block">${item.note}</span>
+                                </div>
+                            </div>
+                            <span class="bg-slate-900 border border-brand-cardLight text-brand-accent font-bold px-2 py-1 rounded-lg text-[11px]">${item.qty}</span>
+                        </label>
+                    `;
+                });
+            } else if (type === 'quinzenal') {
+                const items = [
+                    { id: 's_ov1', name: 'Ovos de Galinha', qty: '2 Cartelas (60 ovos)', note: 'Manter na geladeira ou local arejado' },
+                    { id: 's_io1', name: 'Iogurte Natural/Desnatado (Economia)', qty: '6 Litros (Garrafas 1L)', note: 'Comprar garrafas de 1L reduz o custo em mais de 50% em Sibaúma!' },
+                    { id: 's_mc1', name: 'Maçãs Médias', qty: '30 unidades (~4 kg)', note: 'Duram até 3 semanas na gaveta da geladeira' },
+                    { id: 's_ml1', name: 'Melão Fresco', qty: '2 unidades médias', note: 'Fatiar apenas na semana de consumo' },
+                    { id: 's_leg1', name: 'Legumes (Cenoura, Chuchu, Abobrinha)', qty: '3 kg', note: 'Fáceis de achar em Sibaúma. Cozinhar al dente e congelar' },
+                    { id: 's_fol1', name: 'Folhas Verdes (Alface, Couve/Repolho)', qty: '3 maços', note: 'Secar bem e guardar com papel toalha na geladeira' }
+                ];
+
+                items.forEach(item => {
+                    const isChecked = savedShop[item.id] ? 'checked' : '';
+                    html += `
+                        <label class="bg-brand-card border border-brand-cardLight rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-800/60 transition">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" id="${item.id}" onchange="toggleShopItem('${item.id}')" ${isChecked} class="custom-checkbox sr-only">
+                                <div class="w-5 h-5 border-2 border-slate-600 rounded flex items-center justify-center bg-slate-900">
+                                    <i class="fa-solid fa-check text-brand-dark text-xs hidden"></i>
+                                </div>
+                                <div>
+                                    <span class="font-bold text-white block ${isChecked ? 'line-through text-slate-500' : ''}">${item.name}</span>
+                                    <span class="text-slate-400 text-[11px] block">${item.note}</span>
+                                </div>
+                            </div>
+                            <span class="bg-slate-900 border border-brand-cardLight text-brand-gold font-bold px-2 py-1 rounded-lg text-[11px]">${item.qty}</span>
+                        </label>
+                    `;
+                });
+            } else {
+                html = `
+                    <div class="bg-brand-card border border-brand-cardLight rounded-2xl p-4 space-y-4 text-xs text-slate-300">
+                        <h3 class="font-bold text-white text-sm border-b border-slate-700 pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-microscope text-brand-accent"></i> Crítica Científica do Protocolo Nutricional
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <strong class="text-brand-gold block text-xs">1. Mitigação do Pão 40% Integral (Fisiologia Aplicada):</strong>
+                                <p class="text-slate-400">Pães com 40% de farinha integral contêm amido refinado. Porém, ao combiná-los com <strong>2 ovos + requeijão light + maçã com casca + canela</strong>, criamos um "freio digestivo". O tempo de esvaziamento gástrico aumenta, reduzindo a Carga Glicêmica da refeição e zerando o pico de insulina.</p>
+                            </div>
+
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <strong class="text-brand-accent block text-xs">2. Distribuição Proteica & Gatilho de Leucina:</strong>
+                                <p class="text-slate-400">Com ~160g de proteína/dia (~2g/kg), o plano fraciona os aportes em 5 refeições. Cada refeição atinge o limiar de <strong>3g de Leucina</strong> (o aminoácido chave para ligar a via mTOR), garantindo Síntese Proteica Muscular (MPS) máxima contínua para preencher a sua estrutura de 1,83m.</p>
+                            </div>
+
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <strong class="text-brand-gold block text-xs">3. Balanço Mineral (Potássio x Sódio) & Hormônios:</strong>
+                                <p class="text-slate-400">A abundância de potássio (banana, batata-doce, melão, aveia) neutraliza a retenção hídrica do sódio, puxando a água para dentro da célula muscular (volumização) e enxugando o tecido subcutâneo da cintura.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function toggleShopItem(id) {
+            const savedShop = JSON.parse(localStorage.getItem('carlos_shopping_checks') || '{}');
+            savedShop[id] = !savedShop[id];
+            localStorage.setItem('carlos_shopping_checks', JSON.stringify(savedShop));
+            showToast('Lista de compras atualizada!');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
